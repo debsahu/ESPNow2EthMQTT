@@ -19,12 +19,12 @@ LAN8720 Pins: https://esphome.io/components/ethernet.html#configuration-for-wire
               https://github.com/arendst/Tasmota/issues/9496#issuecomment-715338713
 ESP Now code: https://github.com/HarringayMakerSpace/ESP-Now
 //            */
-#define ETH_CLK_MODE    ETH_CLOCK_GPIO0_IN
-#define ETH_POWER_PIN   GPIO_NUM_16
-#define ETH_TYPE        ETH_PHY_LAN8720
-#define ETH_ADDR        1
-#define ETH_MDC_PIN     GPIO_NUM_23
-#define ETH_MDIO_PIN    GPIO_NUM_18
+#define ETH_CLK_MODE  ETH_CLOCK_GPIO0_IN
+#define ETH_POWER_PIN GPIO_NUM_16
+#define ETH_TYPE      ETH_PHY_LAN8720
+#define ETH_ADDR      1
+#define ETH_MDC_PIN   GPIO_NUM_23
+#define ETH_MDIO_PIN  GPIO_NUM_18
 
 WiFiClient net;
 MQTTClient client(256);
@@ -34,44 +34,49 @@ char mqtt_msg[256];
 
 static bool eth_connected = false;
 
-void WiFiEvent(WiFiEvent_t event) {
-  switch (event) {
-    case SYSTEM_EVENT_ETH_START:
-      Serial.println("ETH Started");
-      //set eth hostname here
-      ETH.setHostname(FRIENDLY_NAME);
-      break;
-    case SYSTEM_EVENT_ETH_CONNECTED:
-      Serial.println("ETH Connected");
-      break;
-    case SYSTEM_EVENT_ETH_GOT_IP:
-      Serial.print("ETH MAC: ");
-      Serial.print(ETH.macAddress());
-      Serial.print(", IPv4: ");
-      Serial.print(ETH.localIP());
-      if (ETH.fullDuplex()) {
-        Serial.print(", FULL_DUPLEX");
-      }
-      Serial.print(", ");
-      Serial.print(ETH.linkSpeed());
-      Serial.println("Mbps");
-      eth_connected = true;
-      break;
-    case SYSTEM_EVENT_ETH_DISCONNECTED:
-      Serial.println("ETH Disconnected");
-      eth_connected = false;
-      break;
-    case SYSTEM_EVENT_ETH_STOP:
-      Serial.println("ETH Stopped");
-      eth_connected = false;
-      break;
-    default:
-      break;
+void WiFiEvent(WiFiEvent_t event)
+{
+  switch (event)
+  {
+  case SYSTEM_EVENT_ETH_START:
+    Serial.println("ETH Started");
+    //set eth hostname here
+    ETH.setHostname(FRIENDLY_NAME);
+    break;
+  case SYSTEM_EVENT_ETH_CONNECTED:
+    Serial.println("ETH Connected");
+    break;
+  case SYSTEM_EVENT_ETH_GOT_IP:
+    Serial.print("ETH MAC: ");
+    Serial.print(ETH.macAddress());
+    Serial.print(", IPv4: ");
+    Serial.print(ETH.localIP());
+    if (ETH.fullDuplex())
+    {
+      Serial.print(", FULL_DUPLEX");
+    }
+    Serial.print(", ");
+    Serial.print(ETH.linkSpeed());
+    Serial.println("Mbps");
+    eth_connected = true;
+    break;
+  case SYSTEM_EVENT_ETH_DISCONNECTED:
+    Serial.println("ETH Disconnected");
+    eth_connected = false;
+    break;
+  case SYSTEM_EVENT_ETH_STOP:
+    Serial.println("ETH Stopped");
+    eth_connected = false;
+    break;
+  default:
+    break;
   }
 }
 
-void initEspNow() {
-  if (esp_now_init()!=0) {
+void initEspNow()
+{
+  if (esp_now_init() != 0)
+  {
     Serial.println("*** ESP_Now init failed");
     ESP.restart();
   }
@@ -98,15 +103,18 @@ void initEspNow() {
     doc["name"] = sensorData.deviceName;
     doc["battery_percent"] = sensorData.battery_percent;
     JsonArray temperature = doc.createNestedArray("temperature");
-    for(int i = 0; i < temp_size; i++){
+    for (int i = 0; i < temp_size; i++)
+    {
       temperature.add(sensorData.temperature[i]);
     }
     JsonArray pressure = doc.createNestedArray("pressure");
-    for(int i = 0; i < pres_size; i++){
+    for (int i = 0; i < pres_size; i++)
+    {
       pressure.add(sensorData.pressure[i]);
     }
     JsonArray humidity = doc.createNestedArray("humidity");
-    for(int i = 0; i < hum_size; i++){
+    for (int i = 0; i < hum_size; i++)
+    {
       humidity.add(sensorData.humidity[i]);
     }
     serializeJson(doc, Serial);
@@ -117,67 +125,84 @@ void initEspNow() {
   });
 }
 
-void configDeviceAP() {
+void configDeviceAP()
+{
   bool result = WiFi.softAP(ESPSSID, ESPPASS, WIFI_CHANNEL, 1); //hidden network
-  if (!result) {
+  if (!result)
+  {
     Serial.println("AP Config failed.");
-  } else {
+  }
+  else
+  {
     Serial.println("AP Config Success. Broadcasting with AP: " + String(ESPSSID));
   }
 }
 
-void connectMQTT(){
+void connectMQTT()
+{
   Serial.print("\nMQTT .");
-  while (!client.connect(FRIENDLY_NAME, MQTT_USER, MQTT_PASS)) {
+  while (!client.connect(FRIENDLY_NAME, MQTT_USER, MQTT_PASS) && eth_connected)
+  {
     Serial.print(".");
     delay(500);
   }
-  Serial.println(" connected!");
+  if (client.connected())
+    Serial.println(" connected!");
 }
 
-void resetWiFi() {
+void resetWiFi()
+{
   WiFi.persistent(false);
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   WiFi.mode(WIFI_AP);
 }
 
-void setup() {
+void setup()
+{
   Serial.begin(115200);
   WiFi.onEvent(WiFiEvent);
 
   Serial.begin(115200);
-  while(!Serial)
+  while (!Serial)
     ;
   Serial.println();
   WiFi.mode(WIFI_AP);
   esp_wifi_set_mac(WIFI_IF_AP, &mac[0]);
-  Serial.print("This node AP mac: "); Serial.println(WiFi.softAPmacAddress());
-  Serial.print("This node STA mac: "); Serial.println(WiFi.macAddress());
+  Serial.print("This node AP mac: ");
+  Serial.println(WiFi.softAPmacAddress());
+  Serial.print("This node STA mac: ");
+  Serial.println(WiFi.macAddress());
 
   configDeviceAP();
   ETH.begin(ETH_ADDR, ETH_POWER_PIN, ETH_MDC_PIN, ETH_MDIO_PIN, ETH_TYPE, ETH_CLK_MODE);
   client.begin(MQTT_HOST, MQTT_PORT, net);
-  connectMQTT();
   initEspNow();
 }
 
 unsigned long heartBeat;
 
-void loop() {
-  if (eth_connected) {
-    if (!client.connected()) {
+void loop()
+{
+  if (eth_connected)
+  {
+    if (!client.connected())
+    {
       connectMQTT();
-    } else {
+    }
+    else
+    {
       client.loop();
     }
 
-    if (millis()-heartBeat > 30000) {
+    if (millis() - heartBeat > 30000)
+    {
       Serial.println("Waiting for ESP-NOW messages...");
       heartBeat = millis();
     }
 
-    if (haveReading) {
+    if (haveReading)
+    {
       haveReading = false;
       client.publish("home/espnow/" + String(sensorData.friendlyName), mqtt_msg);
     }
