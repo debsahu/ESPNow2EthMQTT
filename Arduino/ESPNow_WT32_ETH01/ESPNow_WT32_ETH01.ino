@@ -27,10 +27,10 @@ ESP Now code: https://github.com/HarringayMakerSpace/ESP-Now
 #define ETH_MDIO_PIN  GPIO_NUM_18
 
 WiFiClient net;
-MQTTClient client(256);
+MQTTClient client(512);
 
 volatile boolean haveReading = false;
-char mqtt_msg[256];
+char mqtt_msg[512];
 
 static bool eth_connected = false;
 
@@ -40,7 +40,6 @@ void WiFiEvent(WiFiEvent_t event)
   {
   case SYSTEM_EVENT_ETH_START:
     Serial.println("ETH Started");
-    //set eth hostname here
     ETH.setHostname(FRIENDLY_NAME);
     break;
   case SYSTEM_EVENT_ETH_CONNECTED:
@@ -147,7 +146,9 @@ void connectMQTT()
     delay(500);
   }
   if (client.connected())
+  {
     Serial.println(" connected!");
+  }
 }
 
 void resetWiFi()
@@ -204,6 +205,8 @@ void loop()
     if (haveReading)
     {
       haveReading = false;
+      Serial.print("Sending >> ");
+      Serial.println(mqtt_msg);
       client.publish("home/espnow/" + String(sensorData.friendlyName), mqtt_msg);
     }
   }
